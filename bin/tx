@@ -1,0 +1,213 @@
+#!/usr/bin/env python3
+import json
+import os
+import shlex
+import subprocess
+import sys
+from pathlib import Path
+
+
+APP_NAME = "tx"
+CONFIG_DIR = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / APP_NAME
+CONFIG_FILE = CONFIG_DIR / "commands.json"
+RESERVED_ALIASES = {"add", "list", "help", "version"}
+VERSION = "0.1.0"
+
+
+HELP = f"""tx {VERSION} - launch registered CLIs in a 2x2 iTerm2 layout
+
+Usage:
+  tx add <name> -<alias> [-- <command ...>]
+  tx add <name> --alias <alias> [-- <command ...>]
+  tx list
+  tx help
+  tx version
+  tx <alias>
+
+Examples:
+  tx add claude -cc
+  tx add codex -cx
+  tx add codex-full -cf -- codex --dangerously-bypass-approvals-and-sandbox
+  tx cc
+
+Registry:
+  {CONFIG_FILE}
+"""
+
+
+def main(argv):
+    if not argv or argv[0] in {"help", "-h", "--help"}:
+        print(HELP.rstrip())
+        return
+
+    cmd, *args = argv
+    if cmd == "add":
+        add_command(args)
+    elif cmd == "list":
+        list_commands()
+    elif cmd == "version":
+        print(VERSION)
+    else:
+        run_alias(normalize_alias(cmd))
+
+
+def add_command(args):
+    name, alias, command = parse_add_args(args)
+    data = load_registry()
+    data["commands"][alias] = {"name": name, "command": command}
+    save_registry(data)
+    print(f"registered: tx {alias} -> {command}")
+
+
+def list_commands():
+    commands = load_registry()["commands"]
+    if not commands:
+        print("No commands registered yet.")
+        print("Try: tx add claude -cc")
+        return
+
+    rows = [("ALIAS", "NAME", "COMMAND")]
+    for alias, item in sorted(commands.items()):
+        rows.append((alias, str(item.get("name", "")), str(item.get("command", ""))))
+
+    widths = [max(len(row[i]) for row in rows) for i in range(3)]
+    for idx, row in enumerate(rows):
+        print("  ".join(row[i].ljust(widths[i]) for i in range(3)).rstrip())
+        if idx == 0:
+            print("  ".join("-" * width for width in widths))
+
+
+def parse_add_args(args):
+    if not args:
+        die("missing command name\n\n" + HELP)
+
+    name = args[0]
+    alias = None
+    command = None
+    i = 1
+
+    while i < len(args):
+        arg = args[i]
+        if arg == "--":
+            command = args[i + 1 :]
+            break
+        if arg in ("--alias", "-a"):
+            if i + 1 >= len(args):
+                die(f"{arg} requires a value")
+            alias = normalize_alias(args[i + 1])
+            i += 2
+            continue
+        if arg.startswith("-") and len(arg) > 1:
+            alias = normalize_alias(arg[1:])
+            i += 1
+            continue
+        die(f"unexpected argument for add: {arg}")
+
+    if alias is None:
+        die("missing alias, for example: tx add claude -cc")
+    if command is None or len(command) == 0:
+        command = [name]
+
+    return name, alias, shlex.join(command)
+
+
+def normalize_alias(alias):
+    alias = alias.strip()
+    if alias.startswith("-"):
+        alias = alias.lstrip("-")
+    if not alias:
+        die("alias cannot be empty")
+    if alias in RESERVED_ALIASES:
+        die(f"alias '{alias}' is reserved")
+    if any(ch.isspace() for ch in alias):
+        die("alias cannot contain whitespace")
+    return alias
+
+
+def load_registry():
+    if not CONFIG_FILE.exists():
+        return {"commands": {}}
+    try:
+        with CONFIG_FILE.open("r", encoding="utf-8") as f:
+            data = json.load(f)
+    except (OSError, json.JSONDecodeError) as exc:
+        die(f"failed to read {CONFIG_FILE}: {exc}")
+    if not isinstance(data, dict) or not isinstance(data.get("commands"), dict):
+        die(f"invalid registry format in {CONFIG_FILE}")
+    return data
+
+
+def save_registry(data):
+    CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    tmp = CONFIG_FILE.with_suffix(".json.tmp")
+    with tmp.open("w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False, sort_keys=True)
+        f.write("\n")
+    tmp.replace(CONFIG_FILE)
+
+
+def launch_four(command):
+    script = f"""
+tell application "iTerm2"
+  activate
+  if (count of windows) = 0 then
+    create window with default profile
+  end if
+
+  set targetWindow to current window
+  tell targetWindow
+    set targetTab to current tab
+    tell targetTab
+      set sessionOne to current session
+      tell sessionOne
+        write text {applescript_string(command)}
+        set sessionTwo to split vertically with default profile
+      end tell
+      tell sessionTwo
+        write text {applescript_string(command)}
+      end tell
+      tell sessionOne
+        set sessionThree to split horizontally with default profile
+      end tell
+      tell sessionThree
+        write text {applescript_string(command)}
+      end tell
+      tell sessionTwo
+        set sessionFour to split horizontally with default profile
+      end tell
+      tell sessionFour
+        write text {applescript_string(command)}
+      end tell
+    end tell
+  end tell
+end tell
+"""
+    try:
+        subprocess.run(["osascript", "-e", script], check=True)
+    except FileNotFoundError:
+        die("osascript is not available; tx currently supports macOS iTerm2")
+    except subprocess.CalledProcessError as exc:
+        die(f"failed to control iTerm2 via AppleScript (exit {exc.returncode})")
+
+
+def run_alias(alias):
+    item = load_registry()["commands"].get(alias)
+    if item is None:
+        die(f"unknown command alias '{alias}'. Run 'tx list' to see registered commands.")
+    command = item.get("command")
+    if not isinstance(command, str) or not command:
+        die(f"invalid command registered for alias '{alias}'")
+    launch_four(command)
+
+
+def applescript_string(value):
+    return '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
+
+
+def die(message, code=1):
+    print(f"tx: {message}", file=sys.stderr)
+    sys.exit(code)
+
+
+if __name__ == "__main__":
+    main(sys.argv[1:])
