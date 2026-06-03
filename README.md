@@ -30,11 +30,12 @@ sh install.sh
 ```
 
 The installer places `tx` in `~/.local/bin` and adds that directory to your shell PATH when needed.
+It also pins the installed `tx` script to a detected Python 3 runtime.
 
 Packaged release:
 
 ```sh
-curl -L https://github.com/wuluoluoda/tx-cli/releases/download/v0.1.0/tx-cli-0.1.0.tar.gz -o tx-cli-0.1.0.tar.gz
+curl -L https://github.com/wuluoluoda/tx-cli/releases/download/v0.1.1/tx-cli-0.1.1.tar.gz -o tx-cli-0.1.1.tar.gz
 ```
 
 ## Quick Start

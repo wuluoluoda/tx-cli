@@ -18,6 +18,20 @@ need() {
   }
 }
 
+find_python() {
+  if [ -n "${TX_PYTHON:-}" ]; then
+    printf '%s\n' "$TX_PYTHON"
+    return
+  fi
+  for candidate in /opt/homebrew/bin/python3 /usr/local/bin/python3; do
+    if [ -x "$candidate" ]; then
+      printf '%s\n' "$candidate"
+      return
+    fi
+  done
+  command -v python3 2>/dev/null || true
+}
+
 download() {
   url="$1"
   dest="$2"
@@ -53,9 +67,20 @@ append_path_if_needed() {
   } >> "$shell_rc"
 }
 
-need python3
+PYTHON_BIN="$(find_python)"
+if [ -z "$PYTHON_BIN" ]; then
+  say "tx install: missing required command: python3" >&2
+  exit 1
+fi
+
 mkdir -p "$INSTALL_DIR"
 install_tx
+tmp_bin="$BIN.tmp"
+{
+  printf '#!%s\n' "$PYTHON_BIN"
+  sed '1d' "$BIN"
+} > "$tmp_bin"
+mv "$tmp_bin" "$BIN"
 chmod +x "$BIN"
 
 case "${SHELL:-}" in
@@ -73,6 +98,7 @@ case ":$PATH:" in
 esac
 
 say "tx installed: $BIN"
+say "python runtime: $PYTHON_BIN"
 if [ "$path_ready" -eq 0 ]; then
   say "PATH updated in your shell rc file. Run this once now:"
   say "  export PATH=\"$INSTALL_DIR:\$PATH\""

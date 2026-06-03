@@ -30,11 +30,12 @@ sh install.sh
 ```
 
 安装脚本会把 `tx` 放到 `~/.local/bin`，并在需要时把这个目录写入你的 shell PATH。
+安装时还会把 `tx` 固定到检测到的 Python 3 运行时，避免受 PATH 顺序影响。
 
 下载打包版本：
 
 ```sh
-curl -L https://github.com/wuluoluoda/tx-cli/releases/download/v0.1.0/tx-cli-0.1.0.tar.gz -o tx-cli-0.1.0.tar.gz
+curl -L https://github.com/wuluoluoda/tx-cli/releases/download/v0.1.1/tx-cli-0.1.1.tar.gz -o tx-cli-0.1.1.tar.gz
 ```
 
 ## 快速开始

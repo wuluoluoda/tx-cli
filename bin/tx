@@ -11,7 +11,7 @@ APP_NAME = "tx"
 CONFIG_DIR = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / APP_NAME
 CONFIG_FILE = CONFIG_DIR / "commands.json"
 RESERVED_ALIASES = {"add", "list", "help", "version"}
-VERSION = "0.1.0"
+VERSION = "0.1.1"
 
 
 HELP = f"""tx {VERSION} - launch registered CLIs in a 2x2 iTerm2 layout
