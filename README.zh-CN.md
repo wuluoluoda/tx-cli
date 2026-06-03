@@ -31,6 +31,12 @@ sh install.sh
 
 安装脚本会把 `tx` 放到 `~/.local/bin`，并在需要时把这个目录写入你的 shell PATH。
 
+下载打包版本：
+
+```sh
+curl -L https://github.com/wuluoluoda/tx-cli/releases/download/v0.1.0/tx-cli-0.1.0.tar.gz -o tx-cli-0.1.0.tar.gz
+```
+
 ## 快速开始
 
 ```sh

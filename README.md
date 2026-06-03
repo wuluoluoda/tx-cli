@@ -31,6 +31,12 @@ sh install.sh
 
 The installer places `tx` in `~/.local/bin` and adds that directory to your shell PATH when needed.
 
+Packaged release:
+
+```sh
+curl -L https://github.com/wuluoluoda/tx-cli/releases/download/v0.1.0/tx-cli-0.1.0.tar.gz -o tx-cli-0.1.0.tar.gz
+```
+
 ## Quick Start
 
 ```sh
