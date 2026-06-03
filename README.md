@@ -19,13 +19,13 @@
 One-line install:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/wuluoluoda/tx-cli/v0.1.2/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/wuluoluoda/tx-cli/v0.1.3/install.sh | sh
 ```
 
 Or download first, then run:
 
 ```sh
-curl -fsSLO https://raw.githubusercontent.com/wuluoluoda/tx-cli/v0.1.2/install.sh
+curl -fsSLO https://raw.githubusercontent.com/wuluoluoda/tx-cli/v0.1.3/install.sh
 sh install.sh
 ```
 
@@ -35,7 +35,7 @@ It also pins the installed `tx` script to a detected Python 3 runtime.
 Packaged release:
 
 ```sh
-curl -L https://github.com/wuluoluoda/tx-cli/releases/download/v0.1.2/tx-cli-0.1.2.tar.gz -o tx-cli-0.1.2.tar.gz
+curl -L https://github.com/wuluoluoda/tx-cli/releases/download/v0.1.3/tx-cli-0.1.3.tar.gz -o tx-cli-0.1.3.tar.gz
 ```
 
 ## Quick Start
@@ -44,14 +44,16 @@ curl -L https://github.com/wuluoluoda/tx-cli/releases/download/v0.1.2/tx-cli-0.1
 tx add claude -cc
 tx add codex -cx
 tx list
+tx claude
 tx cc
 ```
 
-`tx cc` opens iTerm2, creates a 2x2 split layout, and runs `claude` in all four panes.
+`tx add claude -cc` registers both `tx claude` and `tx cc`. Either command opens iTerm2, creates a 2x2 split layout, and runs `claude` in all four panes.
 
 ## Commands
 
 ```sh
+tx add <name>
 tx add <name> -<alias>
 tx add <name> --alias <alias>
 tx add <name> -<alias> -- <command ...>
@@ -67,6 +69,8 @@ Examples:
 tx add claude -cc
 tx add codex -cx
 tx add codex-full -cf -- codex --dangerously-bypass-approvals-and-sandbox
+tx claude
+tx cc
 ```
 
 ## Registry

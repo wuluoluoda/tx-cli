@@ -2,7 +2,7 @@
 set -eu
 
 REPO="wuluoluoda/tx-cli"
-BRANCH="${TX_BRANCH:-v0.1.2}"
+BRANCH="${TX_BRANCH:-v0.1.3}"
 INSTALL_DIR="${TX_INSTALL_DIR:-$HOME/.local/bin}"
 BIN="$INSTALL_DIR/tx"
 RAW_BASE="https://raw.githubusercontent.com/$REPO/$BRANCH"

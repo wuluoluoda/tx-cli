@@ -19,13 +19,13 @@
 一行安装：
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/wuluoluoda/tx-cli/v0.1.2/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/wuluoluoda/tx-cli/v0.1.3/install.sh | sh
 ```
 
 或者先下载，再运行：
 
 ```sh
-curl -fsSLO https://raw.githubusercontent.com/wuluoluoda/tx-cli/v0.1.2/install.sh
+curl -fsSLO https://raw.githubusercontent.com/wuluoluoda/tx-cli/v0.1.3/install.sh
 sh install.sh
 ```
 
@@ -35,7 +35,7 @@ sh install.sh
 下载打包版本：
 
 ```sh
-curl -L https://github.com/wuluoluoda/tx-cli/releases/download/v0.1.2/tx-cli-0.1.2.tar.gz -o tx-cli-0.1.2.tar.gz
+curl -L https://github.com/wuluoluoda/tx-cli/releases/download/v0.1.3/tx-cli-0.1.3.tar.gz -o tx-cli-0.1.3.tar.gz
 ```
 
 ## 快速开始
@@ -44,14 +44,16 @@ curl -L https://github.com/wuluoluoda/tx-cli/releases/download/v0.1.2/tx-cli-0.1
 tx add claude -cc
 tx add codex -cx
 tx list
+tx claude
 tx cc
 ```
 
-`tx cc` 会打开 iTerm2，自动切成 2x2 四个 pane，并在四个 pane 里分别启动 `claude`。
+`tx add claude -cc` 会同时注册 `tx claude` 和 `tx cc`。执行任意一个都会打开 iTerm2，自动切成 2x2 四个 pane，并在四个 pane 里分别启动 `claude`。
 
 ## 命令
 
 ```sh
+tx add <name>
 tx add <name> -<alias>
 tx add <name> --alias <alias>
 tx add <name> -<alias> -- <command ...>
@@ -67,6 +69,8 @@ tx <alias>
 tx add claude -cc
 tx add codex -cx
 tx add codex-full -cf -- codex --dangerously-bypass-approvals-and-sandbox
+tx claude
+tx cc
 ```
 
 ## 注册表
