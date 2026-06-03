@@ -19,13 +19,13 @@
 一行安装：
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/wuluoluoda/tx-cli/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/wuluoluoda/tx-cli/v0.1.2/install.sh | sh
 ```
 
 或者先下载，再运行：
 
 ```sh
-curl -fsSLO https://raw.githubusercontent.com/wuluoluoda/tx-cli/main/install.sh
+curl -fsSLO https://raw.githubusercontent.com/wuluoluoda/tx-cli/v0.1.2/install.sh
 sh install.sh
 ```
 
@@ -35,7 +35,7 @@ sh install.sh
 下载打包版本：
 
 ```sh
-curl -L https://github.com/wuluoluoda/tx-cli/releases/download/v0.1.1/tx-cli-0.1.1.tar.gz -o tx-cli-0.1.1.tar.gz
+curl -L https://github.com/wuluoluoda/tx-cli/releases/download/v0.1.2/tx-cli-0.1.2.tar.gz -o tx-cli-0.1.2.tar.gz
 ```
 
 ## 快速开始

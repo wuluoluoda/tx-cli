@@ -19,13 +19,13 @@
 One-line install:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/wuluoluoda/tx-cli/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/wuluoluoda/tx-cli/v0.1.2/install.sh | sh
 ```
 
 Or download first, then run:
 
 ```sh
-curl -fsSLO https://raw.githubusercontent.com/wuluoluoda/tx-cli/main/install.sh
+curl -fsSLO https://raw.githubusercontent.com/wuluoluoda/tx-cli/v0.1.2/install.sh
 sh install.sh
 ```
 
@@ -35,7 +35,7 @@ It also pins the installed `tx` script to a detected Python 3 runtime.
 Packaged release:
 
 ```sh
-curl -L https://github.com/wuluoluoda/tx-cli/releases/download/v0.1.1/tx-cli-0.1.1.tar.gz -o tx-cli-0.1.1.tar.gz
+curl -L https://github.com/wuluoluoda/tx-cli/releases/download/v0.1.2/tx-cli-0.1.2.tar.gz -o tx-cli-0.1.2.tar.gz
 ```
 
 ## Quick Start
