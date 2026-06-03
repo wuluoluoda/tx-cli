@@ -19,13 +19,13 @@
 One-line install:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/wuluoluoda/tx-cli/v0.1.3/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/wuluoluoda/tx-cli/v0.1.4/install.sh | sh
 ```
 
 Or download first, then run:
 
 ```sh
-curl -fsSLO https://raw.githubusercontent.com/wuluoluoda/tx-cli/v0.1.3/install.sh
+curl -fsSLO https://raw.githubusercontent.com/wuluoluoda/tx-cli/v0.1.4/install.sh
 sh install.sh
 ```
 
@@ -35,7 +35,7 @@ It also pins the installed `tx` script to a detected Python 3 runtime.
 Packaged release:
 
 ```sh
-curl -L https://github.com/wuluoluoda/tx-cli/releases/download/v0.1.3/tx-cli-0.1.3.tar.gz -o tx-cli-0.1.3.tar.gz
+curl -L https://github.com/wuluoluoda/tx-cli/releases/download/v0.1.4/tx-cli-0.1.4.tar.gz -o tx-cli-0.1.4.tar.gz
 ```
 
 ## Quick Start
@@ -48,7 +48,7 @@ tx claude
 tx cc
 ```
 
-`tx add claude -cc` registers both `tx claude` and `tx cc`. Either command opens iTerm2, creates a 2x2 split layout, and runs `claude` in all four panes.
+`tx add claude -cc` registers both `tx claude` and `tx cc`. Either command opens iTerm2, creates a 2x2 split layout, enters the directory where you ran `tx`, and runs `claude` in all four panes.
 
 ## Commands
 
