@@ -2,7 +2,7 @@
 
 <p align="center">
   <strong>Four terminal agents, one tiny command.</strong><br>
-  Register a CLI once, then launch it in a 2x2 tmux workspace inside Ghostty or iTerm2.
+  Register a CLI once, then launch it in a 2x2 workspace inside Ghostty or iTerm2.
 </p>
 
 <p align="center">
@@ -19,13 +19,13 @@
 One-line install:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/wuluoluoda/tx-cli/v0.1.5/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/wuluoluoda/tx-cli/v0.1.6/install.sh | sh
 ```
 
 Or download first, then run:
 
 ```sh
-curl -fsSLO https://raw.githubusercontent.com/wuluoluoda/tx-cli/v0.1.5/install.sh
+curl -fsSLO https://raw.githubusercontent.com/wuluoluoda/tx-cli/v0.1.6/install.sh
 sh install.sh
 ```
 
@@ -35,7 +35,7 @@ It also pins the installed `tx` script to a detected Python 3 runtime.
 Packaged release:
 
 ```sh
-curl -L https://github.com/wuluoluoda/tx-cli/releases/download/v0.1.5/tx-cli-0.1.5.tar.gz -o tx-cli-0.1.5.tar.gz
+curl -L https://github.com/wuluoluoda/tx-cli/releases/download/v0.1.6/tx-cli-0.1.6.tar.gz -o tx-cli-0.1.6.tar.gz
 ```
 
 ## Quick Start
@@ -49,11 +49,11 @@ tx claude
 tx cc
 ```
 
-`tx add claude -cc` registers both `tx claude` and `tx cc`. Either command opens your configured terminal, starts a tmux session, creates a 2x2 pane layout, enters the directory where you ran `tx`, and runs `claude` in all four panes.
+`tx add claude -cc` registers both `tx claude` and `tx cc`. Either command opens your configured terminal, creates a 2x2 pane layout, enters the directory where you ran `tx`, and runs `claude` in all four panes.
 
 ## Terminal
 
-`tx` can launch either Ghostty or iTerm2:
+`tx` can launch either Ghostty or iTerm2. Ghostty uses its native AppleScript split API; iTerm2 uses tmux for the repeatable 2x2 layout.
 
 ```sh
 tx terminal ghostty
@@ -105,10 +105,10 @@ Registered shortcuts are stored at:
 ## Requirements
 
 - macOS
-- Ghostty or iTerm2
-- tmux
+- Ghostty 1.3+ or iTerm2
+- tmux, only for the iTerm2 backend
 - Python 3
 
 ## Why
 
-Some CLIs are better as a small control room: one pane for the main task, one for experiments, one for logs, one for a second opinion. `tx` uses tmux for the repeatable layout while keeping your terminal as the place you work.
+Some CLIs are better as a small control room: one pane for the main task, one for experiments, one for logs, one for a second opinion. `tx` keeps the layout repeatable while using your terminal as the place you work.

@@ -14,10 +14,10 @@ CONFIG_DIR = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / 
 CONFIG_FILE = CONFIG_DIR / "commands.json"
 RESERVED_ALIASES = {"add", "list", "help", "version", "terminal"}
 SUPPORTED_TERMINALS = {"auto", "ghostty", "iterm2"}
-VERSION = "0.1.5"
+VERSION = "0.1.6"
 
 
-HELP = f"""tx {VERSION} - launch registered CLIs in a 2x2 tmux layout
+HELP = f"""tx {VERSION} - launch registered CLIs in a 2x2 terminal layout
 
 Usage:
   tx [--terminal auto|ghostty|iterm2] <name-or-alias>
@@ -248,29 +248,102 @@ def resolve_terminal(selection):
 
 
 def launch_four(command, cwd, alias, terminal):
-    if shutil.which("tmux") is None:
-        die("tmux is required. Install it first, then run tx again.")
-    tmux_command = build_tmux_command(command, cwd, alias)
     if terminal == "ghostty":
-        launch_ghostty(tmux_command)
+        launch_ghostty(command, cwd)
     elif terminal == "iterm2":
+        if shutil.which("tmux") is None:
+            die("tmux is required. Install it first, then run tx again.")
+        tmux_command = build_tmux_command(command, cwd, alias)
         launch_iterm2(tmux_command)
     else:
         die(f"unsupported terminal '{terminal}'")
 
 
-def launch_ghostty(tmux_command):
+def launch_ghostty(command, cwd):
     if not Path("/Applications/Ghostty.app").exists():
         die("Ghostty.app was not found in /Applications")
+    pane_command = build_pane_command(command, cwd)
+    use_current_terminal = "ghostty" in os.environ.get("TERM_PROGRAM", "").lower()
     try:
-        subprocess.run(
-            ["open", "-na", "Ghostty.app", "--args", "-e", "/bin/zsh", "-lc", tmux_command],
-            check=True,
-        )
+        run_ghostty_split_script(pane_command, cwd, use_current_terminal)
     except FileNotFoundError:
         die("open is not available; Ghostty launch currently supports macOS")
     except subprocess.CalledProcessError as exc:
         die(f"failed to launch Ghostty (exit {exc.returncode})")
+    if use_current_terminal:
+        os.execv("/bin/zsh", ["/bin/zsh", "-lc", pane_command])
+
+
+def run_ghostty_split_script(pane_command, cwd, use_current_terminal):
+    if use_current_terminal:
+        script = f"""
+on run_command(commandText, targetTerminal)
+  tell application "Ghostty"
+    input text commandText to targetTerminal
+    send key "enter" to targetTerminal
+  end tell
+end run_command
+
+tell application "Ghostty"
+  activate
+
+  set cfg to new surface configuration
+  set initial working directory of cfg to {applescript_string(cwd)}
+
+  set targetWindow to front window
+  set targetTab to selected tab of targetWindow
+  set paneOne to focused terminal of targetTab
+
+  set paneTwo to split paneOne direction right with configuration cfg
+  set paneThree to split paneOne direction down with configuration cfg
+  set paneFour to split paneTwo direction down with configuration cfg
+
+  my run_command({applescript_string(pane_command)}, paneTwo)
+  my run_command({applescript_string(pane_command)}, paneThree)
+  my run_command({applescript_string(pane_command)}, paneFour)
+
+  focus paneOne
+end tell
+"""
+    else:
+        script = f"""
+on run_command(commandText, targetTerminal)
+  tell application "Ghostty"
+    input text commandText to targetTerminal
+    send key "enter" to targetTerminal
+  end tell
+end run_command
+
+tell application "Ghostty"
+  activate
+
+  set cfg to new surface configuration
+  set initial working directory of cfg to {applescript_string(cwd)}
+
+  set targetWindow to new window with configuration cfg
+  set paneOne to terminal 1 of selected tab of targetWindow
+  set paneTwo to split paneOne direction right with configuration cfg
+  set paneThree to split paneOne direction down with configuration cfg
+  set paneFour to split paneTwo direction down with configuration cfg
+
+  my run_command({applescript_string(pane_command)}, paneOne)
+  my run_command({applescript_string(pane_command)}, paneTwo)
+  my run_command({applescript_string(pane_command)}, paneThree)
+  my run_command({applescript_string(pane_command)}, paneFour)
+
+  focus paneOne
+end tell
+"""
+    try:
+        subprocess.run(["osascript", "-e", script], check=True)
+    except FileNotFoundError:
+        die("osascript is not available; Ghostty split launch currently supports macOS")
+    except subprocess.CalledProcessError as exc:
+        die(
+            "failed to control Ghostty via AppleScript. "
+            "Ghostty 1.3+ and macOS Automation permission are required. "
+            f"(exit {exc.returncode})"
+        )
 
 
 def launch_iterm2(tmux_command):
@@ -312,9 +385,16 @@ def run_alias(alias, terminal_override=None, dry_run=False):
     terminal = resolve_terminal(terminal_override or configured_terminal(data))
     if dry_run:
         print(f"terminal: {terminal}")
-        print(build_tmux_command(command, cwd, alias))
+        if terminal == "ghostty":
+            print(build_pane_command(command, cwd))
+        else:
+            print(build_tmux_command(command, cwd, alias))
         return
     launch_four(command, cwd, alias, terminal)
+
+
+def build_pane_command(command, cwd):
+    return f"cd {shlex.quote(cwd)} && {command}"
 
 
 def build_tmux_command(command, cwd, alias):
