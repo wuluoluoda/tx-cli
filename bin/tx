@@ -2,36 +2,43 @@
 import json
 import os
 import shlex
+import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 
 APP_NAME = "tx"
 CONFIG_DIR = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / APP_NAME
 CONFIG_FILE = CONFIG_DIR / "commands.json"
-RESERVED_ALIASES = {"add", "list", "help", "version"}
-VERSION = "0.1.4"
+RESERVED_ALIASES = {"add", "list", "help", "version", "terminal"}
+SUPPORTED_TERMINALS = {"auto", "ghostty", "iterm2"}
+VERSION = "0.1.5"
 
 
-HELP = f"""tx {VERSION} - launch registered CLIs in a 2x2 iTerm2 layout
+HELP = f"""tx {VERSION} - launch registered CLIs in a 2x2 tmux layout
 
 Usage:
+  tx [--terminal auto|ghostty|iterm2] <name-or-alias>
   tx add <name>
   tx add <name> -<alias> [-- <command ...>]
   tx add <name> --alias <alias> [-- <command ...>]
   tx list
+  tx terminal
+  tx terminal auto|ghostty|iterm2
   tx help
   tx version
   tx --dry-run <name-or-alias>
-  tx <alias>
 
 Examples:
   tx add claude
   tx add claude -cc
+  tx terminal ghostty
   tx add codex -cx
   tx add codex-full -cf -- codex --dangerously-bypass-approvals-and-sandbox
   tx claude
+  tx --terminal iterm2 cc
   tx cc
 
 Registry:
@@ -44,19 +51,47 @@ def main(argv):
         print(HELP.rstrip())
         return
 
+    terminal_override, argv = parse_global_options(argv)
+    if not argv:
+        print(HELP.rstrip())
+        return
+
     cmd, *args = argv
     if cmd == "add":
         add_command(args)
     elif cmd == "list":
         list_commands()
+    elif cmd == "terminal":
+        terminal_command(args)
     elif cmd == "version":
         print(VERSION)
     elif cmd == "--dry-run":
         if not args:
             die("--dry-run requires a registered name or alias")
-        run_alias(normalize_alias(args[0]), dry_run=True)
+        run_alias(normalize_alias(args[0]), terminal_override, dry_run=True)
     else:
-        run_alias(normalize_alias(cmd))
+        run_alias(normalize_alias(cmd), terminal_override)
+
+
+def parse_global_options(argv):
+    terminal = None
+    remaining = []
+    i = 0
+    while i < len(argv):
+        arg = argv[i]
+        if arg == "--terminal":
+            if i + 1 >= len(argv):
+                die("--terminal requires one of: auto, ghostty, iterm2")
+            terminal = normalize_terminal(argv[i + 1])
+            i += 2
+            continue
+        if arg.startswith("--terminal="):
+            terminal = normalize_terminal(arg.split("=", 1)[1])
+            i += 1
+            continue
+        remaining.extend(argv[i:])
+        break
+    return terminal, remaining
 
 
 def add_command(args):
@@ -70,12 +105,15 @@ def add_command(args):
 
 
 def list_commands():
-    commands = load_registry()["commands"]
+    data = load_registry()
+    commands = data["commands"]
     if not commands:
         print("No commands registered yet.")
         print("Try: tx add claude")
         return
 
+    print(f"Terminal: {configured_terminal(data)}")
+    print()
     rows = [("ALIAS", "NAME", "COMMAND")]
     for alias, item in sorted(commands.items()):
         rows.append((alias, str(item.get("name", "")), str(item.get("command", ""))))
@@ -144,7 +182,7 @@ def normalize_alias(alias):
 
 def load_registry():
     if not CONFIG_FILE.exists():
-        return {"commands": {}}
+        return default_registry()
     try:
         with CONFIG_FILE.open("r", encoding="utf-8") as f:
             data = json.load(f)
@@ -152,7 +190,13 @@ def load_registry():
         die(f"failed to read {CONFIG_FILE}: {exc}")
     if not isinstance(data, dict) or not isinstance(data.get("commands"), dict):
         die(f"invalid registry format in {CONFIG_FILE}")
+    if not isinstance(data.get("settings"), dict):
+        data["settings"] = {}
     return data
+
+
+def default_registry():
+    return {"commands": {}, "settings": {}}
 
 
 def save_registry(data):
@@ -164,8 +208,72 @@ def save_registry(data):
     tmp.replace(CONFIG_FILE)
 
 
-def launch_four(command, cwd):
-    pane_command = build_pane_command(command, cwd)
+def terminal_command(args):
+    data = load_registry()
+    if not args:
+        print(configured_terminal(data))
+        return
+    if len(args) != 1:
+        die("usage: tx terminal auto|ghostty|iterm2")
+    terminal = normalize_terminal(args[0])
+    data.setdefault("settings", {})["terminal"] = terminal
+    save_registry(data)
+    print(f"terminal: {terminal}")
+
+
+def configured_terminal(data):
+    return normalize_terminal(data.get("settings", {}).get("terminal", "auto"))
+
+
+def normalize_terminal(value):
+    value = str(value).strip().lower()
+    if value not in SUPPORTED_TERMINALS:
+        die(f"unsupported terminal '{value}'. Use one of: auto, ghostty, iterm2")
+    return value
+
+
+def resolve_terminal(selection):
+    selection = normalize_terminal(selection or os.environ.get("TX_TERMINAL", "auto"))
+    if selection != "auto":
+        return selection
+
+    term_program = os.environ.get("TERM_PROGRAM", "").lower()
+    if "ghostty" in term_program:
+        return "ghostty"
+    if "iterm" in term_program:
+        return "iterm2"
+    if Path("/Applications/Ghostty.app").exists():
+        return "ghostty"
+    return "iterm2"
+
+
+def launch_four(command, cwd, alias, terminal):
+    if shutil.which("tmux") is None:
+        die("tmux is required. Install it first, then run tx again.")
+    tmux_command = build_tmux_command(command, cwd, alias)
+    if terminal == "ghostty":
+        launch_ghostty(tmux_command)
+    elif terminal == "iterm2":
+        launch_iterm2(tmux_command)
+    else:
+        die(f"unsupported terminal '{terminal}'")
+
+
+def launch_ghostty(tmux_command):
+    if not Path("/Applications/Ghostty.app").exists():
+        die("Ghostty.app was not found in /Applications")
+    try:
+        subprocess.run(
+            ["open", "-na", "Ghostty.app", "--args", "-e", "/bin/zsh", "-lc", tmux_command],
+            check=True,
+        )
+    except FileNotFoundError:
+        die("open is not available; Ghostty launch currently supports macOS")
+    except subprocess.CalledProcessError as exc:
+        die(f"failed to launch Ghostty (exit {exc.returncode})")
+
+
+def launch_iterm2(tmux_command):
     script = f"""
 tell application "iTerm2"
   activate
@@ -177,25 +285,8 @@ tell application "iTerm2"
   tell targetWindow
     set targetTab to current tab
     tell targetTab
-      set sessionOne to current session
-      tell sessionOne
-        write text {applescript_string(pane_command)}
-        set sessionTwo to split vertically with default profile
-      end tell
-      tell sessionTwo
-        write text {applescript_string(pane_command)}
-      end tell
-      tell sessionOne
-        set sessionThree to split horizontally with default profile
-      end tell
-      tell sessionThree
-        write text {applescript_string(pane_command)}
-      end tell
-      tell sessionTwo
-        set sessionFour to split horizontally with default profile
-      end tell
-      tell sessionFour
-        write text {applescript_string(pane_command)}
+      tell current session
+        write text {applescript_string(tmux_command)}
       end tell
     end tell
   end tell
@@ -204,28 +295,52 @@ end tell
     try:
         subprocess.run(["osascript", "-e", script], check=True)
     except FileNotFoundError:
-        die("osascript is not available; tx currently supports macOS iTerm2")
+        die("osascript is not available; iTerm2 launch currently supports macOS")
     except subprocess.CalledProcessError as exc:
         die(f"failed to control iTerm2 via AppleScript (exit {exc.returncode})")
 
 
-def run_alias(alias, dry_run=False):
-    item = load_registry()["commands"].get(alias)
+def run_alias(alias, terminal_override=None, dry_run=False):
+    data = load_registry()
+    item = data["commands"].get(alias)
     if item is None:
         die(f"unknown command alias '{alias}'. Run 'tx list' to see registered commands.")
     command = item.get("command")
     if not isinstance(command, str) or not command:
         die(f"invalid command registered for alias '{alias}'")
     cwd = os.getcwd()
-    pane_command = build_pane_command(command, cwd)
+    terminal = resolve_terminal(terminal_override or configured_terminal(data))
     if dry_run:
-        print(pane_command)
+        print(f"terminal: {terminal}")
+        print(build_tmux_command(command, cwd, alias))
         return
-    launch_four(command, cwd)
+    launch_four(command, cwd, alias, terminal)
 
 
-def build_pane_command(command, cwd):
-    return f"cd {shlex.quote(cwd)} && {command}"
+def build_tmux_command(command, cwd, alias):
+    session = f"tx-{safe_session_part(alias)}-{int(time.time())}-{os.getpid()}"
+    target = f"{session}:0"
+    commands = [
+        ["tmux", "new-session", "-d", "-s", session, "-c", cwd, command],
+        ["tmux", "split-window", "-h", "-t", target, "-c", cwd, command],
+        ["tmux", "select-pane", "-t", f"{target}.0"],
+        ["tmux", "split-window", "-v", "-t", f"{target}.0", "-c", cwd, command],
+        ["tmux", "select-pane", "-t", f"{target}.1"],
+        ["tmux", "split-window", "-v", "-t", f"{target}.1", "-c", cwd, command],
+        ["tmux", "select-layout", "-t", target, "tiled"],
+        ["tmux", "attach-session", "-t", session],
+    ]
+    return " && ".join(shlex.join(item) for item in commands)
+
+
+def safe_session_part(value):
+    safe = []
+    for ch in value:
+        if ch.isalnum() or ch in {"_", "-"}:
+            safe.append(ch)
+        else:
+            safe.append("-")
+    return "".join(safe) or "session"
 
 
 def applescript_string(value):
